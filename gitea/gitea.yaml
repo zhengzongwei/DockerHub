@@ -6,7 +6,7 @@ networks:
 
 services:
   serveer:
-    image: gitea/gitea:1.18.3
+    image: gitea/gitea:${GITEA_TAG}
     container_name: gitea
     environment:
       - USER_UID=1000
@@ -15,9 +15,9 @@ services:
     networks:
       - gitea
     volumes:
-      - ./data:/data
+      - ${GITEA_PATH}:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "9527:3000"
-      - "9528:22"
+      - "${GITEA_PORT}:3000"
+      - "${GITEA_SSH_PORT}:22"
