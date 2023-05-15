@@ -1,0 +1,23 @@
+version: "3"
+
+networks:
+  gitea:
+    external: false
+
+services:
+  serveer:
+    image: gitea/gitea:${GITEA_TAG}
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - ${GITEA_PATH}:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "${GITEA_PORT}:3000"
+      - "${GITEA_SSH_PORT}:22"
