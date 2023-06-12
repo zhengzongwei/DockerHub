@@ -3,9 +3,10 @@ LABEL MAINTAINER zhengzongwei<zhengzongwei@foxmail.com>
 
 WORKDIR /
 
-RUN dnf update  -y \
-    dnf install rpmdevtools* -y \
-    dnf install tree gcc g++ git vim tmux -y
+RUN dnf update  -y
+RUN dnf install rpmdevtools* -y 
+RUN dnf install tree gcc g++ git vim tmux -y
+
 
 RUN rpmdev-setuptree
 
