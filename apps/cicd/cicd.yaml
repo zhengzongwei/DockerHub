@@ -1,7 +1,12 @@
 version: '3'
 services:
   gitea-server:
-    image: gitea/gitea:${GITEA_TAG}
+    build:
+      context: ${GITEA_DOCKERFILE_DIR}
+      dockerfile: ${GITEA_DOCKERFILE_NAME}
+      args:
+        buildno: 1
+    # image: gitea/gitea:${GITEA_TAG}
     container_name: gitea
     environment:
       - USER_UID=1000

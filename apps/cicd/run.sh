@@ -1,16 +1,65 @@
 #!/bin/bash
 
-CICD_PATH=$HOME/cicd/
-GITEA_PATH = $CICD_PATH/gitea/data
-DRONE_PATH = $CICD_PATH/drone/data
+msg() {
+  printf '%b\n' "$1" >&2
+}
 
-sed -i '/^GITEA_PATH/d' .env
-echo "GITEA_PATH=$GITEA_PATH" >> .env
+tips() {
+  msg "\33[36m[*]\33[0m ${1}${2}"
+}
 
-sed -i '/^DRONE_PATH/d' .env
-echo "DRONE_PATH=$DRONE_PATH" >> .env
+success() {
+  msg "\33[32m[✔]\33[0m ${1}${2}"
+}
 
-mkdir -p $GITEA_PATH
-mkdir -p $DRONE_PATH
+error() {
+  msg "\33[31m[✘]\33[0m ${1}${2}"
+  exit 1
+}
 
-docker-compose -f cicd.yaml up -d
+CICD_PATH=/opt/cicd/
+GITEA_PATH=$CICD_PATH/gitea/data
+DRONE_PATH=$CICD_PATH/drone/data
+
+function check_dir(){
+    if [ ! -d $1 ];then
+        sudo mkdir -p $1
+    else
+        msg "$1 文件夹已存在"
+    fi
+}
+
+function create_dir(){
+
+    check_dir $GITEA_PATH $DRONE_PATH
+    sudo chown -R $USER:$USER $CICD_PATH
+    success "文件夹创建完成"
+    msg "根目录：CICD_PATH"
+}
+
+function parse_env(){
+    sed -i -e s:GITEA_PATH=.*:GITEA_PATH=${GITEA_PATH}:g .env
+
+    sed -i -e s:DRONE_PATH=.*:DRONE_PATH=${DRONE_PATH}:g .env
+
+}
+
+
+function run(){
+    docker-compose -f cicd.yaml up -d
+}
+function main(){
+    tips "基础环境准备"
+    create_dir
+
+    tips "配置env文件"
+    parse_env
+
+    run
+
+}
+
+
+main
+
+
