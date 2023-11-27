@@ -10,6 +10,7 @@ services:
       - MARIADB_PASSWORD=${MARIADB_PASSWORD}
     restart: always
     volumes:
+      - ${MARIADB_PATH}/conf.d:/etc/mysql/conf.d
       - ${MARIADB_PATH}:/var/lib/mysql
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
