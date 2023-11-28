@@ -4,8 +4,24 @@ services:
   coredns:
     image: coredns/coredns:${CoreDNS_TAG}
     container_name: dns
+    command: -conf /etc/coredns/Corefile
     restart: always
     ports:
       - "${CoreDNS_PORT}:53/udp"
+      - "${CoreDNS_PORT}:53/tcp"
+    networks:
+      - dev_net
     volumes:
       - ./conf/Corefile:/etc/coredns/Corefile
+      - ./conf/hosts:/etc/coredns/hosts
+
+  httpd:
+    image: httpd:${HTTPD_TAG}
+    container_name: ${NAME}
+    ports:
+      - "${HTTPD_PORT}:80"
+    networks:
+      - dev_net
+networks:
+  dev_net:
+    driver: bridge

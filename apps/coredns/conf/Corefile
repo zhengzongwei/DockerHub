@@ -1,4 +1,5 @@
 .:53 {
+    rewrite name regex repo.dev.com/  /repo.dev.com/
     hosts /etc/coredns/hosts {
         fallthrough
     }
