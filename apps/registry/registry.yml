@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  registry:
+    image: registry:latest
+    ports:
+      - "443:443"
+    environment:
+      - REGISTRY_HTTP_TLS_CERTIFICATE=/server.crt
+      - REGISTRY_HTTP_TLS_KEY=/server.key
+      - REGISTRY_HTTP_ADDR=0.0.0.0:443
+    volumes:
+      - /data/docker_registry/:/var/lib/registry
+      - ./certs/registry.dev.com.crt:/server.crt:ro
+      - ./certs/registry.dev.com.key:/server.key:ro
+
+
+  registry-web:
+    image: klausmeyer/docker-registry-browser
+    environment:
+      SECRET_KEY_BASE: e86159e905ab0d40f0113e07bc2b600c6fc865e19b15d8a2478f11b1dae1ffc3e7ae1b557615793e364861aeb9ed11d6becce74497d83a2d8b327207109cb332
+      DOCKER_REGISTRY_URL: https://registry:443
+      NO_SSL_VERIFICATION: "true"
+      PUBLIC_REGISTRY_URL: registry.dev.com
+      CA_FILE: /server.crt
+      SSL_CERT_PATH: /server.crt
+      SSL_KEY_PATH: /server.key
+    volumes:
+      - ./certs/registry.dev.com.crt:/server.crt:ro
+      - ./certs/registry.dev.com.key:/server.key:ro
+    ports:
+      - '8443:8443'
+      - '8080:8080'
+
