@@ -1,0 +1,10 @@
+version: '3'
+services:
+  mirror:
+    restart: always
+    image: openresty/openresty:${TAG}
+    ports:
+      - "${PORT}:80"
+    volumes:
+      - ${CONF_PATH}:/usr/local/openresty/nginx/conf/nginx.conf
+      - ${MIRROR_PATH}:/data

@@ -1,4 +1,4 @@
-FROM openeuler/openeuler:22.03-lts-sp1
+FROM openeuler/openeuler:22.03
 LABEL MAINTAINER zhengzongwei<zhengzongwei@foxmail.com>
 
 WORKDIR /
