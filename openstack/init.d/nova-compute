@@ -1,0 +1,79 @@
+#!/bin/bash
+
+NOVA_COMPUTE_PID_FILE="/var/run/nova-compute.pid"
+
+# 启动nova-compute服务的函数
+start_nova_compute() {
+    echo "Starting nova-compute service..."
+    /usr/bin/nova-compute &
+    NOVA_COMPUTE_PID=$!
+    echo $NOVA_COMPUTE_PID > $NOVA_COMPUTE_PID_FILE  # 将进程ID写入到文件中
+    echo "nova-compute started with PID $NOVA_COMPUTE_PID"
+}
+
+# 停止nova-compute服务的函数
+stop_nova_compute() {
+    echo "Stopping nova-compute service..."
+    if [ -f "$NOVA_COMPUTE_PID_FILE" ]; then
+        NOVA_COMPUTE_PID=$(cat $NOVA_COMPUTE_PID_FILE)
+        kill $NOVA_COMPUTE_PID
+        rm -f $NOVA_COMPUTE_PID_FILE
+        echo "nova-compute stopped"
+    else
+        echo "nova-compute PID file $NOVA_COMPUTE_PID_FILE not found"
+    fi
+}
+
+# 重启nova-compute服务的函数
+restart_nova_compute() {
+    stop_nova_compute
+    start_nova_compute
+}
+
+# 检查nova-compute服务状态的函数
+status_nova_compute() {
+    if [ -f "$NOVA_COMPUTE_PID_FILE" ]; then
+        NOVA_COMPUTE_PID=$(cat $NOVA_COMPUTE_PID_FILE)
+        if ps -p $NOVA_COMPUTE_PID > /dev/null; then
+            echo "nova-compute is running with PID $NOVA_COMPUTE_PID"
+        else
+            echo "nova-compute is not running (but PID file $NOVA_COMPUTE_PID_FILE exists)"
+        fi
+    else
+        echo "nova-compute is not running (PID file $NOVA_COMPUTE_PID_FILE not found)"
+    fi
+}
+
+# 显示帮助信息
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start nova-compute service"
+    echo "  stop    - Stop nova-compute service"
+    echo "  restart - Restart nova-compute service"
+    echo "  status  - Check status of nova-compute service"
+}
+
+# 捕获SIGTERM信号以进行优雅关闭
+trap stop_nova_compute SIGTERM
+
+# 根据传入的命令执行相应的操作
+case "$1" in
+    start)
+        start_nova_compute
+        ;;
+    stop)
+        stop_nova_compute
+        ;;
+    restart)
+        restart_nova_compute
+        ;;
+    status)
+        status_nova_compute
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0

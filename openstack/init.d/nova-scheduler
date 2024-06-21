@@ -1,0 +1,72 @@
+#!/bin/bash
+
+NOVA_SCHEDULER_PID_FILE="/var/run/nova-scheduler.pid"
+
+start_nova_scheduler() {
+    echo "Starting nova-scheduler service..."
+    /usr/bin/nova-scheduler &
+    NOVA_SCHEDULER_PID=$!
+    echo $NOVA_SCHEDULER_PID > $NOVA_SCHEDULER_PID_FILE
+    echo "nova-scheduler started with PID $NOVA_SCHEDULER_PID"
+}
+
+stop_nova_scheduler() {
+    echo "Stopping nova-scheduler service..."
+    if [ -f "$NOVA_SCHEDULER_PID_FILE" ]; then
+        NOVA_SCHEDULER_PID=$(cat $NOVA_SCHEDULER_PID_FILE)
+        kill $NOVA_SCHEDULER_PID
+        rm -f $NOVA_SCHEDULER_PID_FILE
+        echo "nova-scheduler stopped"
+    else
+        echo "nova-scheduler PID file $NOVA_SCHEDULER_PID_FILE not found"
+    fi
+}
+
+restart_nova_scheduler() {
+    stop_nova_scheduler
+    start_nova_scheduler
+}
+
+status_nova_scheduler() {
+    if [ -f "$NOVA_SCHEDULER_PID_FILE" ]; then
+        NOVA_SCHEDULER_PID=$(cat $NOVA_SCHEDULER_PID_FILE)
+        if ps -p $NOVA_SCHEDULER_PID > /dev/null; then
+            echo "nova-scheduler is running with PID $NOVA_SCHEDULER_PID"
+        else
+            echo "nova-scheduler is not running (but PID file $NOVA_SCHEDULER_PID_FILE exists)"
+        fi
+    else
+        echo "nova-scheduler is not running (PID file $NOVA_SCHEDULER_PID_FILE not found)"
+    fi
+}
+
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start nova-scheduler service"
+    echo "  stop    - Stop nova-scheduler service"
+    echo "  restart - Restart nova-scheduler service"
+    echo "  status  - Check status of nova-scheduler service"
+}
+
+trap stop_nova_scheduler SIGTERM
+
+case "$1" in
+    start)
+        start_nova_scheduler
+        ;;
+    stop)
+        stop_nova_scheduler
+        ;;
+    restart)
+        restart_nova_scheduler
+        ;;
+    status)
+        status_nova_scheduler
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0

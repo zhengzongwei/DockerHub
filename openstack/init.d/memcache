@@ -1,0 +1,82 @@
+#!/bin/bash
+
+MEMCACHED_PID_FILE="/var/run/memcached/memcached.pid"
+MEMCACHED_USER="memcached"
+
+# 启动memcached服务的函数
+start_memcached() {
+    echo "Starting memcached service..."
+    /usr/bin/memcached -d -u $MEMCACHED_USER -P $MEMCACHED_PID_FILE
+    sleep 1  # 等待一秒，确保PID文件已创建
+    if [ -f "$MEMCACHED_PID_FILE" ]; then
+        MEMCACHED_PID=$(cat $MEMCACHED_PID_FILE)
+        echo "memcached started with PID $MEMCACHED_PID"
+    else
+        echo "Failed to start memcached. PID file $MEMCACHED_PID_FILE not found."
+    fi
+}
+# 停止memcached服务的函数
+stop_memcached() {
+    echo "Stopping memcached service..."
+    if [ -f "$MEMCACHED_PID_FILE" ]; then
+        MEMCACHED_PID=$(cat $MEMCACHED_PID_FILE)
+        kill $MEMCACHED_PID
+        rm -f $MEMCACHED_PID_FILE
+        echo "memcached stopped"
+    else
+        echo "memcached PID file $MEMCACHED_PID_FILE not found"
+    fi
+}
+# 重启memcached服务的函数
+restart_memcached() {
+    stop_memcached
+    start_memcached
+}
+
+# 检查memcached服务状态的函数
+status_memcached() {
+    if [ -f "$MEMCACHED_PID_FILE" ]; then
+        MEMCACHED_PID=$(cat $MEMCACHED_PID_FILE)
+        if ps -p $MEMCACHED_PID > /dev/null; then
+            echo "memcached is running with PID $MEMCACHED_PID"
+        else
+            echo "memcached is not running (but PID file $MEMCACHED_PID_FILE exists)"
+        fi
+    else
+        echo "memcached is not running (PID file $MEMCACHED_PID_FILE not found)"
+    fi
+}
+
+# 显示帮助信息
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start memcached service"
+    echo "  stop    - Stop memcached service"
+    echo "  restart - Restart memcached service"
+    echo "  status  - Check status of memcached service"
+}
+
+# 捕获SIGTERM信号以进行优雅关闭
+trap stop_memcached SIGTERM
+
+# 根据传入的命令执行相应的操作
+case "$1" in
+    start)
+        start_memcached
+        ;;
+    stop)
+        stop_memcached
+        ;;
+    restart)
+        restart_memcached
+        ;;
+    status)
+        status_memcached
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0
