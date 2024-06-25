@@ -1,0 +1,92 @@
+#!/bin/bash
+
+HTTPD_PID_FILE="/var/run/httpd.pid"
+
+# 启动httpd服务的函数
+start_httpd() {
+    echo "Starting httpd service..."
+    /usr/sbin/httpd &
+    HTTPD_PID=$!
+    echo $HTTPD_PID > $HTTPD_PID_FILE  # 将进程ID写入到文件中
+    echo "httpd started with PID $HTTPD_PID"
+}
+
+# 停止httpd服务的函数
+stop_httpd() {
+    echo "Stopping httpd service..."
+    if [ -f "$HTTPD_PID_FILE" ]; then
+        HTTPD_PID=$(cat $HTTPD_PID_FILE)
+        if kill $HTTPD_PID > /dev/null 2>&1; then
+            echo "httpd process $HTTPD_PID stopped"
+        else
+            echo "httpd process $HTTPD_PID not found"
+        fi
+        rm -f $HTTPD_PID_FILE
+    else
+        echo "httpd PID file $HTTPD_PID_FILE not found"
+        echo "Attempting to stop all httpd processes..."
+        pkill httpd
+    fi
+    # 确保所有httpd进程都被停止
+    pkill -f /usr/sbin/httpd
+    echo "All httpd processes stopped"
+}
+
+# 重启httpd服务的函数
+restart_httpd() {
+    stop_httpd
+    start_httpd
+}
+
+# 检查httpd服务状态的函数
+status_httpd() {
+    if [ -f "$HTTPD_PID_FILE" ]; then
+        HTTPD_PID=$(cat $HTTPD_PID_FILE)
+        if ps -p $HTTPD_PID > /dev/null; then
+            echo "httpd is running with PID $HTTPD_PID"
+        else
+            echo "httpd is not running (but PID file $HTTPD_PID_FILE exists)"
+        fi
+    else
+        echo "httpd is not running (PID file $HTTPD_PID_FILE not found)"
+        if pgrep httpd > /dev/null; then
+            echo "However, httpd processes are running."
+        else
+            echo "No httpd processes are running."
+        fi
+    fi
+}
+
+# 显示帮助信息
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start httpd service"
+    echo "  stop    - Stop httpd service"
+    echo "  restart - Restart httpd service"
+    echo "  status  - Check status of httpd service"
+}
+
+# 捕获SIGTERM信号以进行优雅关闭
+trap stop_httpd SIGTERM
+
+# 根据传入的命令执行相应的操作
+case "$1" in
+    start)
+        start_httpd
+        ;;
+    stop)
+        stop_httpd
+        ;;
+    restart)
+        restart_httpd
+        ;;
+    status)
+        status_httpd
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0

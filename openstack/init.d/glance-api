@@ -1,0 +1,79 @@
+#!/bin/bash
+
+GLANCE_PID_FILE="/var/run/glance-api.pid"
+
+# 启动glance-api服务的函数
+start_glance() {
+    echo "Starting glance-api service..."
+    /usr/bin/glance-api &
+    GLANCE_PID=$!
+    echo $GLANCE_PID > $GLANCE_PID_FILE  # 将进程ID写入到文件中
+    echo "glance-api started with PID $GLANCE_PID"
+}
+
+# 停止glance-api服务的函数
+stop_glance() {
+    echo "Stopping glance-api service..."
+    if [ -f "$GLANCE_PID_FILE" ]; then
+        GLANCE_PID=$(cat $GLANCE_PID_FILE)
+        kill $GLANCE_PID
+        rm -f $GLANCE_PID_FILE
+        echo "glance-api stopped"
+    else
+        echo "glance-api PID file $GLANCE_PID_FILE not found"
+    fi
+}
+
+# 重启glance-api服务的函数
+restart_glance() {
+    stop_glance
+    start_glance
+}
+
+# 检查glance-api服务状态的函数
+status_glance() {
+    if [ -f "$GLANCE_PID_FILE" ]; then
+        GLANCE_PID=$(cat $GLANCE_PID_FILE)
+        if ps -p $GLANCE_PID > /dev/null; then
+            echo "glance-api is running with PID $GLANCE_PID"
+        else
+            echo "glance-api is not running (but PID file $GLANCE_PID_FILE exists)"
+        fi
+    else
+        echo "glance-api is not running (PID file $GLANCE_PID_FILE not found)"
+    fi
+}
+
+# 显示帮助信息
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start glance-api service"
+    echo "  stop    - Stop glance-api service"
+    echo "  restart - Restart glance-api service"
+    echo "  status  - Check status of glance-api service"
+}
+
+# 捕获SIGTERM信号以进行优雅关闭
+trap stop_glance SIGTERM
+
+# 根据传入的命令执行相应的操作
+case "$1" in
+    start)
+        start_glance
+        ;;
+    stop)
+        stop_glance
+        ;;
+    restart)
+        restart_glance
+        ;;
+    status)
+        status_glance
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0

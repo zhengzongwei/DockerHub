@@ -1,0 +1,72 @@
+#!/bin/bash
+
+NOVA_CONDUCTOR_PID_FILE="/var/run/nova-conductor.pid"
+
+start_nova_conductor() {
+    echo "Starting nova-conductor service..."
+    /usr/bin/nova-conductor &
+    NOVA_CONDUCTOR_PID=$!
+    echo $NOVA_CONDUCTOR_PID > $NOVA_CONDUCTOR_PID_FILE
+    echo "nova-conductor started with PID $NOVA_CONDUCTOR_PID"
+}
+
+stop_nova_conductor() {
+    echo "Stopping nova-conductor service..."
+    if [ -f "$NOVA_CONDUCTOR_PID_FILE" ]; then
+        NOVA_CONDUCTOR_PID=$(cat $NOVA_CONDUCTOR_PID_FILE)
+        kill $NOVA_CONDUCTOR_PID
+        rm -f $NOVA_CONDUCTOR_PID_FILE
+        echo "nova-conductor stopped"
+    else
+        echo "nova-conductor PID file $NOVA_CONDUCTOR_PID_FILE not found"
+    fi
+}
+
+restart_nova_conductor() {
+    stop_nova_conductor
+    start_nova_conductor
+}
+
+status_nova_conductor() {
+    if [ -f "$NOVA_CONDUCTOR_PID_FILE" ]; then
+        NOVA_CONDUCTOR_PID=$(cat $NOVA_CONDUCTOR_PID_FILE)
+        if ps -p $NOVA_CONDUCTOR_PID > /dev/null; then
+            echo "nova-conductor is running with PID $NOVA_CONDUCTOR_PID"
+        else
+            echo "nova-conductor is not running (but PID file $NOVA_CONDUCTOR_PID_FILE exists)"
+        fi
+    else
+        echo "nova-conductor is not running (PID file $NOVA_CONDUCTOR_PID_FILE not found)"
+    fi
+}
+
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start nova-conductor service"
+    echo "  stop    - Stop nova-conductor service"
+    echo "  restart - Restart nova-conductor service"
+    echo "  status  - Check status of nova-conductor service"
+}
+
+trap stop_nova_conductor SIGTERM
+
+case "$1" in
+    start)
+        start_nova_conductor
+        ;;
+    stop)
+        stop_nova_conductor
+        ;;
+    restart)
+        restart_nova_conductor
+        ;;
+    status)
+        status_nova_conductor
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0

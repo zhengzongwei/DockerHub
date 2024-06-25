@@ -1,0 +1,72 @@
+#!/bin/bash
+
+NOVA_NOVNC_PROXY_PID_FILE="/var/run/nova-novncproxy.pid"
+
+start_nova_novncproxy() {
+    echo "Starting nova-novncproxy service..."
+    /usr/bin/nova-novncproxy &
+    NOVA_NOVNC_PROXY_PID=$!
+    echo $NOVA_NOVNC_PROXY_PID > $NOVA_NOVNC_PROXY_PID_FILE
+    echo "nova-novncproxy started with PID $NOVA_NOVNC_PROXY_PID"
+}
+
+stop_nova_novncproxy() {
+    echo "Stopping nova-novncproxy service..."
+    if [ -f "$NOVA_NOVNC_PROXY_PID_FILE" ]; then
+        NOVA_NOVNC_PROXY_PID=$(cat $NOVA_NOVNC_PROXY_PID_FILE)
+        kill $NOVA_NOVNC_PROXY_PID
+        rm -f $NOVA_NOVNC_PROXY_PID_FILE
+        echo "nova-novncproxy stopped"
+    else
+        echo "nova-novncproxy PID file $NOVA_NOVNC_PROXY_PID_FILE not found"
+    fi
+}
+
+restart_nova_novncproxy() {
+    stop_nova_novncproxy
+    start_nova_novncproxy
+}
+
+status_nova_novncproxy() {
+    if [ -f "$NOVA_NOVNC_PROXY_PID_FILE" ]; then
+        NOVA_NOVNC_PROXY_PID=$(cat $NOVA_NOVNC_PROXY_PID_FILE)
+        if ps -p $NOVA_NOVNC_PROXY_PID > /dev/null; then
+            echo "nova-novncproxy is running with PID $NOVA_NOVNC_PROXY_PID"
+        else
+            echo "nova-novncproxy is not running (but PID file $NOVA_NOVNC_PROXY_PID_FILE exists)"
+        fi
+    else
+        echo "nova-novncproxy is not running (PID file $NOVA_NOVNC_PROXY_PID_FILE not found)"
+    fi
+}
+
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start nova-novncproxy service"
+    echo "  stop    - Stop nova-novncproxy service"
+    echo "  restart - Restart nova-novncproxy service"
+    echo "  status  - Check status of nova-novncproxy service"
+}
+
+trap stop_nova_novncproxy SIGTERM
+
+case "$1" in
+    start)
+        start_nova_novncproxy
+        ;;
+    stop)
+        stop_nova_novncproxy
+        ;;
+    restart)
+        restart_nova_novncproxy
+        ;;
+    status)
+        status_nova_novncproxy
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0

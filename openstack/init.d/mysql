@@ -1,0 +1,79 @@
+#!/bin/bash
+
+MYSQL_PID_FILE="/var/run/mysqld/mysqld.pid"
+
+# 启动mysql服务的函数
+start_mysql() {
+    echo "Starting mysql service..."
+    /usr/bin/mysqld_safe --pid-file=$MYSQL_PID_FILE &
+    MYSQL_PID=$!
+    echo $MYSQL_PID > $MYSQL_PID_FILE  # 将进程ID写入到文件中
+    echo "mysql started with PID $MYSQL_PID"
+}
+
+# 停止mysql服务的函数
+stop_mysql() {
+    echo "Stopping mysql service..."
+    if [ -f "$MYSQL_PID_FILE" ]; then
+        MYSQL_PID=$(cat $MYSQL_PID_FILE)
+        kill $MYSQL_PID
+        rm -f $MYSQL_PID_FILE
+        echo "mysql stopped"
+    else
+        echo "mysql PID file $MYSQL_PID_FILE not found"
+    fi
+}
+
+# 重启mysql服务的函数
+restart_mysql() {
+    stop_mysql
+    start_mysql
+}
+
+# 检查mysql服务状态的函数
+status_mysql() {
+    if [ -f "$MYSQL_PID_FILE" ]; then
+        MYSQL_PID=$(cat $MYSQL_PID_FILE)
+        if ps -p $MYSQL_PID > /dev/null; then
+            echo "mysql is running with PID $MYSQL_PID"
+        else
+            echo "mysql is not running (but PID file $MYSQL_PID_FILE exists)"
+        fi
+    else
+        echo "mysql is not running (PID file $MYSQL_PID_FILE not found)"
+    fi
+}
+
+# 显示帮助信息
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo "  start   - Start mysql service"
+    echo "  stop    - Stop mysql service"
+    echo "  restart - Restart mysql service"
+    echo "  status  - Check status of mysql service"
+}
+
+# 捕获SIGTERM信号以进行优雅关闭
+trap stop_mysql SIGTERM
+
+# 根据传入的命令执行相应的操作
+case "$1" in
+    start)
+        start_mysql
+        ;;
+    stop)
+        stop_mysql
+        ;;
+    restart)
+        restart_mysql
+        ;;
+    status)
+        status_mysql
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+
+exit 0
