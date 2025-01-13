@@ -5,8 +5,11 @@ networks:
     external: false
 
 services:
-  serveer:
-    image: gitea/gitea:${GITEA_TAG}
+  server:
+    build:
+      context: .
+      args:
+        - GITEA_VERSION=${GITEA_VERSION}
     container_name: gitea
     environment:
       - USER_UID=1000

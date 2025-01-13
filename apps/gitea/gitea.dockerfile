@@ -1,4 +1,12 @@
-FROM gitea/gitea:1.23.1
+# 使用 ARG 指令来接收环境变量，并提供默认值
+ARG GITEA_VERSION=1.23.1
+
+# 使用动态版本的基础镜像
+FROM gitea/gitea:${GITEA_VERSION}
+
+LABEL maintainer="zhengzongwei<zhengzongwei@foxmail.com>"
+LABEL version="${GITEA_VERSION}"
+LABEL description="Customized Gitea Docker image with additional packages"
 
 # 更新软件源
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
