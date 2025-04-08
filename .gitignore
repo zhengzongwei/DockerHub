@@ -6,6 +6,9 @@
 *.iml
 out
 gen
+.python-version
+
 /galaxy-openstack-deploy/*
 /apps/gitea/data/*
 /openstack-dev-docker/*
+/galaxy-openstack-deploy/openstack_deps/keystone/.python-version
