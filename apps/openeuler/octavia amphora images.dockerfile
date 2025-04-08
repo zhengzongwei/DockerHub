@@ -1,15 +1,14 @@
-FROM openeuler/openeuler:24.03-lts
+FROM openeuler/openeuler:24.03
 LABEL MAINTAINER="zhengzongwei<zhengzongwei@foxmail.com>"
 
 WORKDIR /
 
-RUN dnf update  -y
-RUN dnf install rpmdevtools* -y
+RUN dnf install git
 
-# RUN dnf install tree gcc g++ git vim tmux -y
+RUN git clone https://github.com/openstack/octavia.git /opt/ && cd octavia && git checkout -b 2023.2 remotes/origin/stable/2023.2
 
+RUN python -m venv /opt/octavia/venv
 
-RUN rpmdev-setuptree
 
 # 配置文件
 RUN sed -i "s@TMOUT=300@TMOUT=0@g" /etc/bashrc \

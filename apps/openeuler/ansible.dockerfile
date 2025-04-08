@@ -1,4 +1,4 @@
-FROM openeuler/openeuler:24.03-lts
+FROM openeuler/openeuler:24.03
 LABEL MAINTAINER="zhengzongwei<zhengzongwei@foxmail.com>"
 
 WORKDIR /
@@ -7,9 +7,8 @@ RUN dnf update  -y
 RUN dnf install rpmdevtools* -y
 
 # RUN dnf install tree gcc g++ git vim tmux -y
+RUN  dnf install ansible
 
-
-RUN rpmdev-setuptree
 
 # 配置文件
 RUN sed -i "s@TMOUT=300@TMOUT=0@g" /etc/bashrc \
