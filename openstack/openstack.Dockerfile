@@ -1,5 +1,5 @@
-# FROM openeuler/openeuler:24.03-lts
-FROM ${IMAGE_TAG}:${IMAGE_VERSION}
+FROM openeuler/openeuler:24.03-lts
+# FROM ${IMAGE_TAG}:${IMAGE_VERSION}
 
 LABEL MAINTAINER="zhengzongwei <zhengzongwei@foxmail.com>" 
 
@@ -37,7 +37,7 @@ RUN \
 RUN mkdir -p /etc/my.cnf.d/ && \
     tee /etc/my.cnf.d/openstack.cnf > /dev/null <<EOF
 [mysqld]
-bind-address = ${IP_ADDRESS}
+bind-address = 127.0.0.1
 default-storage-engine = innodb
 innodb_file_per_table = on
 max_connections = 4096
@@ -45,7 +45,7 @@ collation-server = utf8_general_ci
 character-set-server = utf8
 EOF
 
-RUN mariadb mariadb-server python3-PyMySQL
+RUN dnf install mariadb-server
 # 配置 MARIADB
 RUN useradd -r mysql
 # 启动 MARIADB
@@ -55,7 +55,6 @@ RUN su mysql -s /bin/bash -c 'mysqld &'
 # RABBITMQ
 RUN yum install rabbitmq-server -y 
 
-RUN dnf install -y mariadb mariadb-server python3-PyMySQL
 # 配置 MARIADB
 RUN useradd -r mysql
 # 启动 MARIADB
@@ -220,7 +219,7 @@ RUN source ~/.admin-openrc && openstack domain create --description "An Example 
     openstack role add --project demo-project --user demo demo
 
 # 验证
-RUN openstack --os-auth-url http://controller:5000/v3 \
+RUN openstack --os-auth-url http://controller-1:5000/v3 \
     --os-project-domain-name Default --os-user-domain-name Default \
     --os-project-name admin --os-username admin token issue
 
@@ -241,7 +240,6 @@ RUN python -m venv /opt/glance/venv && source /opt/glance/venv/bin/activate && \
     pip install -r requirements.txt && python /opt/glance/setup.py install && cp /opt/glance/venv/bin/glance-* /usr/bin/ \
     pip install python-memcached pymysql SQLAlchemy==1.4.52
 
-RUN 
 
 RUN mysql -e "\
     CREATE DATABASE glance; \
@@ -287,9 +285,9 @@ RUN openstack user create --domain default --password "glance" glance && \
     openstack role add --project service --user glance admin && \
     openstack service create --name glance --description "OpenStack Image" image
 
-RUN openstack endpoint create --region RegionOne image public http://${HOSTNAME}:9292 && \
-    openstack endpoint create --region RegionOne image internal http://${HOSTNAME}:9292 && \
-    openstack endpoint create --region RegionOne image admin http://${HOSTNAME}:9292
+RUN openstack endpoint create --region RegionOne image public http://${hostname}:9292 && \
+    openstack endpoint create --region RegionOne image internal http://${hostname}:9292 && \
+    openstack endpoint create --region RegionOne image admin http://${hostname}:9292
 
 COPY ./init.d/glance-api /etc/init.d/
 
@@ -457,7 +455,7 @@ RUN HOST_IP=$(ip a show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n 1)
 RUN tee /etc/nova/nova.conf > /dev/null <<EOF
 [DEFAULT]
 enabled_apis = osapi_compute,metadata
-transport_url = rabbit://openstack:openstack@controller:5672/
+transport_url = rabbit://openstack:openstack@127.0.0.1:5672/
 my_ip = $HOST_IP
 use_neutron = true
 firewall_driver = nova.virt.firewall.NoopFirewallDriver
@@ -467,18 +465,18 @@ lock_path = /var/lib/nova/tmp
 log_dir = /var/log/nova/
 
 [api_database]
-connection = mysql+pymysql://nova:nova@controller/nova_api
+connection = mysql+pymysql://nova:nova@127.0.0.1/nova_api
 
 [database]
-connection = mysql+pymysql://nova:nova@controller/nova
+connection = mysql+pymysql://nova:nova@127.0.0.1/nova
 
 [api]
 auth_strategy = keystone
 
 [keystone_authtoken]
-www_authenticate_uri = http://controller:5000/
-auth_url = http://controller:5000/
-memcached_servers = controller:11211
+www_authenticate_uri = http://127.0.0.1:5000/
+auth_url = http://127.0.0.1:5000/
+memcached_servers = 127.0.0.1:11211
 auth_type = password
 project_domain_name = Default
 user_domain_name = Default
@@ -490,7 +488,7 @@ password = nova
 enabled = true
 server_listen = \$my_ip
 server_proxyclient_address = \$my_ip
-novncproxy_base_url = http://controller:6080/vnc_auto.html
+novncproxy_base_url = http://$my_ip:6080/vnc_auto.html
 
 [libvirt]
 virt_type = qemu
@@ -498,7 +496,7 @@ virt_type = qemu
 # cpu_model = cortex-a72
 
 [glance]
-api_servers = http://controller:9292
+api_servers = http://127.0.0.1:9292
 
 [oslo_concurrency]
 lock_path = /var/lib/nova/tmp
@@ -509,12 +507,12 @@ project_domain_name = Default
 project_name = service
 auth_type = password
 user_domain_name = Default
-auth_url = http://controller:5000/v3
+auth_url = http://127.0.0.1:5000/v3
 username = placement
 password = placement
 
 [neutron]
-auth_url = http://controller:5000
+auth_url = http://127.0.0.1:5000
 auth_type = password
 project_domain_name = default
 user_domain_name = default
@@ -536,11 +534,11 @@ RUN su -s /bin/sh -c "nova-manage api_db sync" nova && \
 
 
 
-COPY ./init.d/nova-api \ 
-    ./init.d/nova-compute \
-    ./init.d/nova-scheduler \
-    ./init.d/nova-conductor \
-    ././init.d/nova-novncproxy \
+COPY ../init.d/nova-api \ 
+    ../init.d/nova-compute \
+    ../init.d/nova-scheduler \
+    ../init.d/nova-conductor \
+    .././init.d/nova-novncproxy \
     /etc/init.d/
 
 RUN chmod +x /etc/init.d/nova-api \
@@ -548,3 +546,208 @@ RUN chmod +x /etc/init.d/nova-api \
     /etc/init.d/nova-scheduler \
     /etc/init.d/nova-conductor \
     /etc/init.d/nova-novncproxy
+
+## Neutron 部署
+RUN getent group neutron >/dev/null || groupadd -r neutron  \
+    && ! getent passwd neutron >/dev/null && \
+    useradd -r -g neutron -G nova,nobody -d /var/lib/neutron -s /sbin/nologin -c "OpenStack Neutron Daemons" neutron
+
+RUN git clone https://opendev.org/openstack/neutron.git /opt/neutron && git config --global --add safe.directory /opt/neutron && cd /opt/neutron/ \
+    && git checkout -b stable/2023.2 remotes/origin/stable/2023.2
+
+RUN mkdir -p /var/lib/neutron/ /var/log/neutron /etc/neutron && chown -R neutron:neutron /var/lib/neutron/ /var/log/neutron /etc/neutron /opt/neutron
+
+RUN python -m venv /opt/neutron/venv && source /opt/neutron/venv/bin/activate \
+    &&  pip install -r requirements.txt && pip install python-memcached pymysql SQLAlchemy==1.4.52 \
+    && python /opt/neutron/setup.py install && deactivate && cp /opt/neutron/venv/bin/neutron-* /usr/bin/
+
+RUN mysql -e "\
+    CREATE DATABASE neutron; \
+    GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'localhost' IDENTIFIED BY 'neutron'; \
+    GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY 'neutron';"
+
+RUN source ~/.admin-openrc \
+    openstack user create --domain default --password "neutron" neutron \
+    openstack role add --project service --user neutron admin \
+    openstack service create --name neutron --description "OpenStack Networking" network \
+    openstack endpoint create --region RegionOne network public http://${HOSTNAME}:9696 \
+    openstack endpoint create --region RegionOne network internal http://${HOSTNAME}:9696 \
+    openstack endpoint create --region RegionOne network admin http://${HOSTNAME}:9696 
+    
+RUN  dnf install ebtables ipset -y
+
+RUN tee /etc/neutron/neutron.conf > /dev/null <<EOF
+
+[DEFAULT]
+core_plugin = ml2
+service_plugins = router
+allow_overlapping_ips = true
+transport_url = rabbit://openstack:openstack@127.0.0.1
+auth_strategy = keystone
+notify_nova_on_port_status_changes = true
+notify_nova_on_port_data_changes = true
+api_workers = 3  
+
+[database]
+connection = mysql+pymysql://neutron:neutron@127.0.0.1/neutron
+
+[keystone_authtoken]
+www_authenticate_uri = http://127.0.0.1:5000
+auth_url = http://127.0.0.1:5000
+memcached_servers = 127.0.0.1:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = neutron
+password = neutron
+
+[nova]
+auth_url = http://127.0.0.1:5000
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+region_name = RegionOne
+project_name = service
+username = nova
+password = nova
+
+[oslo_concurrency]
+lock_path = /var/lib/neutron/tmp
+
+[experimental]
+linuxbridge = true
+
+EOF
+
+RUN tee /etc/neutron/plugins/ml2/ml2_conf.ini > /dev/null <<EOF
+[ml2]
+type_drivers = flat,vlan,vxlan
+tenant_network_types = vxlan
+mechanism_drivers = linuxbridge,l2population
+extension_drivers = port_security
+
+[ml2_type_flat]
+flat_networks = provider
+
+[ml2_type_vxlan]
+vni_ranges = 1:1000
+
+[securitygroup]
+enable_ipset = true
+
+EOF
+
+RUN ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini
+
+RUN tee /etc/neutron/plugins/ml2/linuxbridge_agent.ini  > /dev/null <<EOF
+
+[linux_bridge]
+physical_interface_mappings = provider:PROVIDER_INTERFACE_NAME
+
+[vxlan]
+enable_vxlan = true
+local_ip = OVERLAY_INTERFACE_IP_ADDRESS
+l2_population = true
+
+[securitygroup]
+enable_security_group = true
+firewall_driver = neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
+
+EOF
+
+RUN tee /etc/neutron/l3_agent.ini  > /dev/null <<EOF
+
+[DEFAULT]
+interface_driver = linuxbridge
+EOF
+
+RUN tee /etc/neutron/dhcp_agent.ini  > /dev/null <<EOF
+
+[DEFAULT]
+interface_driver = linuxbridge
+dhcp_driver = neutron.agent.linux.dhcp.Dnsmasq
+enable_isolated_metadata = true
+EOF
+
+RUN tee  /etc/neutron/metadata_agent.ini  > /dev/null <<EOF
+[DEFAULT]
+nova_metadata_host = controller
+metadata_proxy_shared_secret = METADATA_SECRET
+EOF
+
+
+RUN su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+
+
+## Cinder
+RUN getent group cinder >/dev/null || groupadd -r cinder  \
+    && ! getent passwd cinder >/dev/null && \
+    useradd -r -g cinder -G nova,nobody -d /var/lib/cinder -s /sbin/nologin -c "OpenStack Cinder Daemons" cinder
+
+RUN dnf install lvm2 scsi-target-utils rpcbind nfs-utils
+
+
+RUN git clone https://opendev.org/openstack/cinder.git /opt/cinder && git config --global --add safe.directory /opt/cinder && cd /opt/cinder/ \
+    && git checkout -b stable/2023.2 remotes/origin/stable/2023.2
+
+RUN mkdir -p /var/log/cinder/ /var/lib/cinder /etc/cinder && chown -R cinder:cinder /var/log/cinder/ /var/lib/cinder /etc/cinder /opt/cinder
+
+RUN mysql -e "\
+    CREATE DATABASE cinder; \
+    GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'localhost' IDENTIFIED BY 'cinder'; \
+    GRANT ALL PRIVILEGES ON cinder.* TO 'cinder'@'%' IDENTIFIED BY 'cinder';"
+
+
+RUN source ~/.admin-openrc \
+    openstack user create --domain default --password "cinder" cinder \
+    openstack role add --project service --user cinder admin \
+    openstack service create --name cinderv2 --description "OpenStack Block Storage" volumev2 \
+    openstack service create --name cinderv3 --description "OpenStack Block Storage" volumev3 \
+    openstack endpoint create --region RegionOne volumev2 public http://${HOSTNAME}:8776/v2/%\(project_id\)s \
+    openstack endpoint create --region RegionOne volumev2 internal http://${HOSTNAME}:8776/v2/%\(project_id\)s \
+    openstack endpoint create --region RegionOne volumev2 admin http://${HOSTNAME}:8776/v2/%\(project_id\)s \
+    openstack endpoint create --region RegionOne volumev3 public http://${HOSTNAME}:8776/v3/%\(project_id\)s \
+    openstack endpoint create --region RegionOne volumev3 internal http://${HOSTNAME}:8776/v3/%\(project_id\)s \
+    openstack endpoint create --region RegionOne volumev3 admin http://${HOSTNAME}:8776/v3/%\(project_id\)s
+
+# TODO 存储设备配置
+RUN tee /etc/cinder/cinder.conf > /dev/null <<EOF
+
+[DEFAULT]
+transport_url = rabbit://openstack:openstack@${HOSTNAME}
+auth_strategy = keystone
+my_ip = ${HOST_IP}
+enabled_backends = lvm
+backup_driver=cinder.backup.drivers.nfs.NFSBackupDriver
+backup_share=controller:/data/cinder/backup
+
+osapi_volume_workers = 3
+
+[database]
+connection = mysql+pymysql://cinder:cinder@${HOSTNAME}/cinder
+
+[keystone_authtoken]
+www_authenticate_uri = http://${HOSTNAME}:5000
+auth_url = http://${HOSTNAME}:5000
+memcached_servers = ${HOSTNAME}:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = cinder
+password = cinder
+
+[oslo_concurrency]
+lock_path = /var/lib/cinder/tmp
+
+[lvm]
+volume_driver = cinder.volume.drivers.lvm.LVMVolumeDriver
+volume_group = cinder-volumes
+iscsi_protocol = iscsi
+iscsi_helper = tgtadm
+
+EOF
+
+RUN su -s /bin/sh -c "cinder-manage db sync" cinder
+
