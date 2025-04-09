@@ -1,4 +1,4 @@
-version: "3"
+version: '3.8'
 
 networks:
   gitea:
@@ -8,6 +8,7 @@ services:
   server:
     build:
       context: .
+      dockerfile: gitea.dockerfile
       args:
         - GITEA_VERSION=${GITEA_VERSION}
     container_name: gitea
