@@ -1,9 +1,14 @@
 version: '3.8'
 
 networks:
-  gitea:
-    external: false
-
+  internal_net:
+    driver: bridge
+    # internal: true  # 禁止外部访问 # 会新建内部网络
+    name: internal_net  # 强制指向现有网络
+  share_net:
+    external: true
+    name: share_net  # 强制指向现有网络
+  
 services:
   server:
     build:
@@ -17,7 +22,8 @@ services:
       - USER_GID=1000
     restart: always
     networks:
-      - gitea
+      - internal_net
+      - share_net
     volumes:
       - ${GITEA_PATH}:/data
       - /etc/timezone:/etc/timezone:ro
