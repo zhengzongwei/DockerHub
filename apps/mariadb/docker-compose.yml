@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  mariadb:
+    image: "mariadb:${MARIADB_TAG:-latest}"
+    container_name: mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD?必须设置该变量}
+      MARIADB_USER: ${MARIADB_USER:-appuser}  # 带默认值
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD?必须设置密码}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-appdb}  # 新增数据库名
+      TZ: ${TZ:-Asia/Shanghai}  # 时区变量
+    restart: unless-stopped  # 比always更合理
+    volumes:
+      - ${MARIADB_PATH}/data:/var/lib/mysql  # 明确data子目录
+      - ${MARIADB_PATH}/conf.d:/etc/mysql/conf.d
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    healthcheck:  # 建议添加健康检查
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal_net
+      - share_net
+
+networks:
+  internal_net:
+    driver: bridge
+    # internal: true  # 禁止外部访问 # 会新建内部网络
+    name: internal_net  # 强制指向现有网络
+  share_net:
+    external: true
+    name: share_net  # 强制指向现有网络
