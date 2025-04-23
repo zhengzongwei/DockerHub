@@ -8,6 +8,8 @@ out
 gen
 .python-version
 
+/apps/gitea/data/*
+/apps/mariadb/data/*
 /galaxy-openstack-deploy/*
 /apps/gitea/data/*
 /openstack-dev-docker/*
