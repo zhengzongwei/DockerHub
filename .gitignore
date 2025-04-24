@@ -14,3 +14,4 @@ gen
 /apps/gitea/data/*
 /openstack-dev-docker/*
 /galaxy-openstack-deploy/openstack_deps/keystone/.python-version
+/apps/cicd/data/*
