@@ -1,0 +1,81 @@
+services:
+  mariadb:
+    image: "mariadb:${MARIADB_TAG:-latest}"
+    container_name: mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD?必须设置该变量}
+      MARIADB_USER: ${MARIADB_USER:-gitea} # 带默认值
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD?必须设置密码}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-gitea} # 新增数据库名
+      TZ: ${TZ:-Asia/Shanghai} # 时区变量
+    restart: unless-stopped # 比always更合理
+    volumes:
+      - ${MARIADB_PATH}/data:/var/lib/mysql # 明确data子目录
+      - ${MARIADB_PATH}/conf.d:/etc/mysql/conf.d
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cicd
+      - external_net
+
+  gitea-server:
+    build:
+      context: ${GITEA_DOCKERFILE_DIR}
+      dockerfile: ${GITEA_DOCKERFILE_NAME:-Dockerfile}
+    # image: gitea/gitea:${GITEA_TAG}
+    container_name: gitea-server
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__actions__ENABLED=true
+    restart: always
+    # dns: 172.18.0.53
+    networks:
+      external_net:
+        ipv4_address: 172.18.0.3
+      cicd: {}
+    volumes:
+      - ${GITEA_PATH}:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "${GITEA_PORT}:3000"
+      - "${GITEA_SSH_PORT}:22"
+
+  act_runner:
+    image: gitea/act_runner:${ACT_RUNNER_VERSION}
+    container_name: act_runner
+    depends_on:
+      - gitea-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${ACT_PATH}:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - cicd
+      # - external_net
+    environment:
+      CONFIG_FILE: /data/config.yaml
+      GITEA_INSTANCE_URL: ${GITEA_INSTANCE_URL}
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN}
+      GITEA_RUNNER_NAME: my-runner
+      GITEA_RUNNER_LABELS: ubuntu-latest:docker://node:16-bullseye,ubuntu-22.04:docker://node:16-bullseye
+
+networks:
+  cicd:
+    internal: true  # 纯内网
+    driver: bridge
+  external_net:
+    external: true  # 使用预创建的外网
