@@ -1,0 +1,28 @@
+services:
+  dnsmasq:
+    image: dockurr/dnsmasq:${DNSMASQ_TAG}
+    container_name: dnsmasq
+    environment:
+      DNS1: "114.114.114.114"
+      DNS2: "223.5.5.5"
+    networks:
+      external_net:
+        ipv4_address: 172.18.0.53
+    volumes:
+      - ${CONF_PATH}/dnsmasq.conf:/etc/dnsmasq.conf
+      - ${CONF_PATH}/dnsmasq.d:/etc/dnsmasq.d
+    # ports:
+    #   - ${DNSMASQ_PORT}:53/udp
+    #   - ${DNSMASQ_PORT}:53/tcp
+    cap_add:
+      - NET_ADMIN
+    restart: always
+
+networks:
+  cicd:
+    internal: true  # 纯内网
+    driver: bridge
+
+  external_net:
+    external: true  # 使用预创建的外网
+    name: external_net
