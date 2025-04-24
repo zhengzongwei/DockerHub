@@ -65,14 +65,34 @@ services:
       - /etc/localtime:/etc/localtime:ro
     networks:
       - cicd
-      # - external_net
+      - external_net
     environment:
       CONFIG_FILE: /data/config.yaml
       GITEA_INSTANCE_URL: ${GITEA_INSTANCE_URL}
       GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN}
       GITEA_RUNNER_NAME: my-runner
-      GITEA_RUNNER_LABELS: ubuntu-latest:docker://node:16-bullseye,ubuntu-22.04:docker://node:16-bullseye
-
+      # GITEA_RUNNER_LABELS: ubuntu-latest:docker://my-dev-env:latest,ubuntu-22.04:docker://my-dev-env:latest
+      GITEA_RUNNER_LABELS: ${GITEA_RUNNER_LABELS}
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    depends_on:
+      - gitea-server
+    restart: always
+    volumes:
+      - ${NGINX_PATH}/nginx.conf/:/etc/nginx/nginx.conf
+      - ${NGINX_PATH}/conf.d/:/etc/nginx/conf.d/
+      - ${NGINX_PATH}/stream.d/:/etc/nginx/stream.d/
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "${NGINX_PORT}:80"
+      - "${NGINX_SSL_PORT}:443"
+      - "${NGINX_SSH_PORT}:22"
+    networks:
+      cicd: {}
+      external_net: {}
+  
 networks:
   cicd:
     internal: true  # 纯内网
