@@ -18,8 +18,9 @@ services:
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "${MARIADB_PORT:-3306}:3306"
-    healthcheck:  # 建议添加健康检查
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
       interval: 10s
       timeout: 5s
       retries: 3
