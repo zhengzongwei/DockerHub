@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  mariadb:
+    image: mariadb:12.1.2-noble
+    container_name: ${CONTAINER_NAME:-mariadb}
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mydatabase}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+      MYSQL_INITDB_SKIP_TZINFO: "1"
+    volumes:
+      - ${DATA_VOLUME:-./data}:/var/lib/mysql
+      - ${CONFIG_VOLUME:-./config}:/etc/mysql/conf.d
+      - ${BACKUP_VOLUME:-./backups}:/backups
+      - ${INIT_SCRIPTS_VOLUME:-./init-scripts}:/docker-entrypoint-initdb.d
+    networks:
+      - mariadb-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --bind-address=0.0.0.0
+      - --max_connections=${MAX_CONNECTIONS:-100}
+      - --max_allowed_packet=${MAX_ALLOWED_PACKET:-256M}
+      - --innodb_buffer_pool_size=${INNODB_BUFFER_POOL_SIZE:-256M}
+
+networks:
+  mariadb-network:
+    name: ${NETWORK_NAME:-mariadb-network}
+    driver: bridge

@@ -1,0 +1,29 @@
+# 自定义 MariaDB 配置
+# 这个文件会被自动加载到 /etc/mysql/conf.d/
+
+[mysqld]
+# 性能优化
+innodb_buffer_pool_size = ${INNODB_BUFFER_POOL_SIZE:-256M}
+innodb_log_file_size = 128M
+innodb_flush_log_at_trx_commit = 2
+
+# 连接设置
+max_connections = ${MAX_CONNECTIONS:-100}
+max_allowed_packet = ${MAX_ALLOWED_PACKET:-256M}
+wait_timeout = 600
+interactive_timeout = 600
+
+# 查询缓存 (根据需要使用)
+# query_cache_type = 1
+# query_cache_size = 64M
+
+# 日志设置
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow-query.log
+long_query_time = 2
+log_queries_not_using_indexes = 1
+
+# 二进制日志 (用于复制和恢复)
+# log_bin = /var/log/mysql/mysql-bin.log
+# expire_logs_days = 7
+# max_binlog_size = 100M
