@@ -1,0 +1,29 @@
+runner:
+  file: .runner
+  capacity: 1
+  timeout: 3h
+  shutdown_timeout: 0s
+  insecure: false
+  fetch_timeout: 5s
+  fetch_interval: 2s
+  labels:
+    - "ubuntu-latest:docker://catthehacker/ubuntu:full-latest"
+    - "ubuntu-22.04:docker://catthehacker/ubuntu:full-22.04"
+    - "ubuntu-20.04:docker://catthehacker/ubuntu:full-20.04"
+
+cache:
+  enabled: true
+  dir: ""
+  host: ""
+  external_server: ""
+
+container:
+  privileged: false
+  network: "ci_cd_cicd"
+  workdir_parent:
+  valid_volumes: []
+  docker_host: ""
+  force_pull: true
+  force_rebuild: false
+host:
+  workdir_parent:
